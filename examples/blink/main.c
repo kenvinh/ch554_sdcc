@@ -3,7 +3,7 @@
 #include <ch554.h>
 #include <debug.h>
 
-#define LED_PIN 7
+#define LED_PIN 5
 SBIT(LED, 0x90, LED_PIN);
 
 void main() {
@@ -15,7 +15,8 @@ void main() {
     P1_DIR_PU = P1_DIR_PU |	(1<<LED_PIN);
 
     while (1) {
-    	mDelaymS(100);
+    	mDelaymS(1000);
         LED = !LED;
     }
 }
+`

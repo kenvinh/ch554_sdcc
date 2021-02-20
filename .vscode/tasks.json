@@ -1,0 +1,25 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "config",
+            "type": "shell",
+            "command": "cmake -D CMAKE_TOOLCHAIN_FILE=${workspaceFolder}/toolchain/sdcc-toolchain-8051.cmake \"${fileDirname}\\CMakeLists.txt\" -G Ninja -B\"${fileDirname}\\${config:build_dir}\" ",
+            "problemMatcher": [],
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "cmake --build \"${fileDirname}\\${config:build_dir}\" ",
+            "problemMatcher": []
+        },
+        {
+            "label": "rebuild",
+            "type": "shell",
+            "command": "cmake --build \"${fileDirname}\\${config:build_dir}\" --clean-first",
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,4 +1,8 @@
 {
+    "terminal.integrated.env.windows": {
+        "PATH": "${workspaceFolder}\\toolchain;${workspaceFolder}\\toolchain\\cmake\\bin;${workspaceFolder}\\toolchain\\ninja;${workspaceFolder}\\toolchain\\sdcc\\4.0.0\\bin;${env:PATH}"
+    },
+    "build_dir": "build",
     "files.associations": {
 
         "[SubtitleTools.com] Main.C": "cpp",
