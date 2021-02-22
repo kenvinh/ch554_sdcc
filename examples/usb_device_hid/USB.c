@@ -6,16 +6,26 @@
 * Description        : A demo for USB compound device created by CH554, support 
 					   keyboard , and HID-compliant device.                     
 ********************************************************************************/
-#include 	<stdio.h>
-#include 	<stdlib.h>
-#include 	<string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
-#include 	"CH554.H"
-#include 	"DEBUG.H"
-#include 	"USB.h"
-#include 	"Key.h"
+#include <ch554.h>
+#include <ch554_usb.h>
+#include <debug.h>
 
-// #pragma  NOAREGS
+#define		L_WIN 					0x08
+#define 	L_ALT 					0x04
+#define		L_SHIFT					0x02
+#define 	L_CTL					0x01
+#define 	R_WIN 					0x80
+#define 	R_ALT 					0x40
+#define 	R_SHIFT					0x20
+#define 	R_CTL					0x10
+#define 	SPACE					0x2C
+#define		ENTER					0x28
+
+#define MOUSE 0
 
 #define 	THIS_ENDP0_SIZE         DEFAULT_ENDP0_SIZE
 #define		BUFFER_SIZE				64
@@ -29,22 +39,20 @@ __xdata __at (0x0050) uint8_t  Ep2Buffer[DUAL_BUFFER_SIZE];  								// Endpoint
 /**************************** Global variable ********************************/	
 uint8_t   volatile	SetupReq, SetupLen, UsbConfig;
 uint8_t	volatile	EnumOK, FLAG;
-uint8_t *  pDescr;                                                                		// USB enumerate complete flag.
+const uint8_t * pDescr;                                                                		// USB enumerate complete flag.
 USB_SETUP_REQ  		SetupReqBuf;                                   					// A buffer for Setup package.
 
 uint8_t HIDKey[8] = {0};
-uint8_t TX[64] = {0};	
-uint8_t RX[64] = {0};
 uint8_t TXflag = 0;
 uint8_t RXflag = 0;
 
 
 /**************************** Device Descriptor *************************************/
 __code uint8_t DevDesc[18] = {																// Device Descriptor
-	0x12,0x01,
-	0x10,0x01,
-	0x00,0x00,
-	0x00,0x08,      
+	0x12,0x01,                                                                      // bLength | bDescriptorType (constant 0x01)
+	0x10,0x01,                                                                      // bcdUSB (2 bytes)
+	0x00,0x00,                                                                      // bDeviceClass | bDeviceSubClass
+	0x00,0x08,                                                                      // bDeviceProtocol | bMaxPacketSize
     
 	0x31,0x51,																		// Vendor ID   |  VID =  0X5131///413c
 	0x07,0x20,																		// Product ID  |  PID = 0X2007 /// 2105
@@ -52,8 +60,8 @@ __code uint8_t DevDesc[18] = {																// Device Descriptor
 //	0x05,0x21,
 
 	0x00,0x11,																		// bcdDevice		
-	0x00,0x00,
-	0x00,0x01
+	0x00,0x00,                                                                      // iManufacturer | iProduct
+	0x00,0x01                                                                       // iSerialNumber | bNumConfigurations
 };
 /**************************** HID Report Descriptor *********************************/
 __code uint8_t KeyRepDesc[65] = 															// Report Descriptor, DELL Keyboard
@@ -69,9 +77,11 @@ __code uint8_t KeyRepDesc[65] = 															// Report Descriptor, DELL Keyboa
 	0x95, 0x08, 		// Report count ( 8 )
 	0x75, 0x01, 		// Report size	( 1 )
 	0x81, 0x02, 		// Input ( Data, Variable, Absolute )
+
 	0x95, 0x08, 		// Report count ( 8 )
 	0x75, 0x01, 		// Report size	( 1 )
 	0x81, 0x01, 		// Input ( const )
+
 	0x05, 0x08, 		// Usage page( LED )
 	0x19, 0x01, 		// Usage min ( 1 )
 	0x29, 0x03, 		// Usage max ( 3 )
@@ -138,7 +148,7 @@ __code uint8_t	MyLangDescr[] = { 0x04, 0x03, 0x09, 0x04 };
 // ������Ϣ
 __code uint8_t	MyManuInfo[] = { 0x0E, 0x03, 'w', 0, 'c', 0, 'h', 0, '.', 0, 'c', 0, 'n', 0 };
 // ��Ʒ��Ϣ
-__code uint8_t	MyProdInfo[] = { 0x0C, 0x03, 'C', 0, 'H', 0, '5', 0, '5', 0, '4', 0 };
+__code uint8_t	MyProdInfo[] = { 0x0C, 0x03, 'C', 0, 'H', 0, '5', 0, '5', 0, '2', 0 };
 
 /*******************************************************************************
 * Function Name  : USBDeviceInit()
@@ -195,8 +205,8 @@ static void Enp1IntIn( void )
 *******************************************************************************/
 static void Enp2TX( void )
 {	
-    memcpy( &Ep2Buffer[64], TX, sizeof(TX));                         					// Upload data
-    UEP2_T_LEN = sizeof(TX);                                           					// Upload length
+    // memcpy( &Ep2Buffer[64], TX, sizeof(TX));                         					// Upload data
+    UEP2_T_LEN = 64;                                           					// Upload length
     UEP2_CTRL = UEP2_CTRL & ~ MASK_UEP_T_RES | UEP_T_RES_ACK;                			// Return ACK
     while(( UEP2_CTRL & MASK_UEP_T_RES ) == UEP_T_RES_ACK);                  			// Waiting upload complete, avoid overwriting	
 }			
@@ -214,8 +224,8 @@ static void Enp2RX()
 	len = USB_RX_LEN; 
 	if(len>3)
 	{
-		memcpy(RX,Ep2Buffer, sizeof(RX)); 
-		memcpy(TX,RX, sizeof(RX)); 
+		// memcpy(RX,Ep2Buffer, sizeof(RX)); 
+		// memcpy(TX,RX, sizeof(RX)); 
 		RXflag = len;
 		Enp2TX();
 	}
@@ -238,7 +248,7 @@ static void USB_Setup()
 * Function Name  : DeviceInterrupt()
 * Description    : USB ISR
 *******************************************************************************/
-void DeviceInterrupt( void ) __interrupt (INT_NO_USB)                      			//USB ISR, Using register 1
+void DeviceInterrupt( void ) __interrupt (INT_NO_USB) __using (1)                     	//USB ISR, Using register 1
 {
     uint8_t len;			
 	
@@ -690,52 +700,52 @@ static void SendKey( char *p )
 * Return         : None
 *******************************************************************************/
 
-char __code sPath[] = "`   E:\\vck1\\hid_recv.exe    \r   ";						    // The path for the software. SPACE for delay
-char *pStr = sPath;
+// char __code sPath[] = "`   E:\\vck1\\hid_recv.exe    \r   ";						    // The path for the software. SPACE for delay
+// char *pStr = sPath;
 
-char __code s1Path[] = "`   \r  ";						
-char *p1Str = s1Path;
+// char __code s1Path[] = "`   \r  ";						
+// char *p1Str = s1Path;
 
-void TSTKey(void)
-{
-	uint16_t KeyData;
-	if(TKEY_CTRL&bTKC_IF)		                                  
-	{
-		KeyData = TKEY_DAT; 
-		if (KeyData < (TouchKeyButton-100))	        //100 �����ȵ���	
-		{
-			TXflag =0x04 ;
-		}
-#ifdef DE_PRINTF
-     printf("B.=  %04x\n",KeyData&0x7FFF);		
-#endif		
-	}
-}
+// void TSTKey(void)
+// {
+// 	uint16_t KeyData;
+// 	if(TKEY_CTRL&bTKC_IF)		                                  
+// 	{
+// 		KeyData = TKEY_DAT; 
+// 		if (KeyData < (TouchKeyButton-100))	        //100 �����ȵ���	
+// 		{
+// 			TXflag =0x04 ;
+// 		}
+// #ifdef DE_PRINTF
+//      printf("B.=  %04x\n",KeyData&0x7FFF);		
+// #endif		
+// 	}
+// }
 
 void TXflagHandle(uint8_t val)
 {	
-	TSTKey();
+	//TSTKey();
 	if(TXflag & 0X01)
 	{				
-		SendKey(pStr);																	    // Upload path
-		pStr++;	
-		if(*pStr == '\0')
-		{
-			SendKey( "~" );																	// Upload ALT+B
-			mDelaymS( 200 );	
-			TXflag &= 0xFE;
-		}	
+		//SendKey(pStr);																	    // Upload path
+		//pStr++;	
+		//if(*pStr == '\0')
+		// {
+		// 	SendKey( "~" );																	// Upload ALT+B
+		// 	mDelaymS( 200 );	
+		// 	TXflag &= 0xFE;
+		// }	
 	}	
 	else if(TXflag & 0X02)
 	{				
-		SendKey(p1Str);																	    // Upload path
-		pStr++;	
-		if(*p1Str == '\0')
-		{
-			SendKey( "~" );																	// Upload ALT+B
-			mDelaymS( 200 );	
-			TXflag &= 0xFE;
-		}
+		//SendKey(p1Str);																	    // Upload path
+		//pStr++;	
+		//if(*p1Str == '\0')
+		// {
+		// 	SendKey( "~" );																	// Upload ALT+B
+		// 	mDelaymS( 200 );	
+		// 	TXflag &= 0xFE;
+		// }
 	}
 	else if(TXflag & 0x04)	    					
 	{

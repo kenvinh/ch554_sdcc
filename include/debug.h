@@ -6,6 +6,13 @@
 
 #include <stdint.h>
 
+#ifndef  SUCCESS
+#define  SUCCESS  0
+#endif
+#ifndef  FAIL
+#define  FAIL    0xFF
+#endif
+
 #ifndef  UART0_BAUD
 #define  UART0_BAUD    9600
 #endif

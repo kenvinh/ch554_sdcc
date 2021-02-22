@@ -4,11 +4,11 @@
     },
     "build_dir": "build",
     "files.associations": {
-
         "[SubtitleTools.com] Main.C": "cpp",
         "Main.C": "cpp",
         "ADC.C": "cpp",
-        "type_c.C": "cpp"
-
+        "type_c.C": "cpp",
+        "ch554.h": "c",
+        "debug.h": "c"
     }
 }

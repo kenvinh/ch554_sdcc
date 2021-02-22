@@ -1,8 +1,24 @@
 # Common variables
-set(FREQ_SYS 24000000)
-set(XRAM_SIZE 0x0400)
-set(XRAM_LOC 0x0000)
-set(CODE_SIZE 0x3800)
+
+if(NOT DEFINED FREQ_SYS)
+  message(STATUS "Not defined FREQ_SYS")
+  set(FREQ_SYS 24000000)
+endif()
+
+if(NOT DEFINED XRAM_SIZE)
+  message(STATUS "Not defined XRAM_SIZE")
+  set(XRAM_SIZE 0x0400)
+endif()
+
+if(NOT DEFINED XRAM_LOC)
+  message(STATUS "Not defined XRAM_LOC")
+  set(XRAM_LOC 0x0000)
+endif()
+
+if(NOT DEFINED CODE_SIZE)
+  message(STATUS "Not defined CODE_SIZE")
+  set(CODE_SIZE 0x3800)
+endif()
 
 set(CFLAGS )
 set(CFLAGS ${CFLAGS} -V -mmcs51 --model-small)
